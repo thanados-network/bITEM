@@ -496,6 +496,28 @@ BEGIN
 END;
 $$;
 
+DROP FUNCTION IF EXISTS bitem.get_vids CASCADE;
+CREATE OR REPLACE FUNCTION bitem.get_vids(current_id INT)
+    RETURNS JSONB
+    LANGUAGE plpgsql
+AS
+$$
+DECLARE
+    return_vids JSONB;
+BEGIN
+    SELECT JSONB_AGG(f.filename) as vids
+    FROM bitem.files f
+             JOIN model.link l ON f.id = l.domain_id
+
+    WHERE l.property_code = 'P67'
+
+      AND l.range_id = current_id
+      AND f.mimetype = 'video'
+    INTO return_vids;
+    RETURN return_vids;
+END;
+$$;
+
 DROP FUNCTION IF EXISTS bitem.get_three_d_models CASCADE;
     CREATE OR REPLACE FUNCTION bitem.get_three_d_models(current_id INT)
         RETURNS JSONB
@@ -882,7 +904,7 @@ BEGIN
               FROM (SELECT DISTINCT REPLACE(openatlas_class_name, 'object_location', 'place') as class_,
                                     name,
                                     id,
-                                    NULLIF(description, '') AS      description,
+                                    NULLIF(description, '')                                   AS description,
                                     mainfirst,
                                     mainlast,
                                     JSONB_AGG(jsonb_strip_nulls(jsonb_build_object('_label',
@@ -906,7 +928,7 @@ BEGIN
                                                                                            '{197086, 197088}'),
                                                                                    'specification',
                                                                                    NULLIF(bitem.get_involvement(origin_id, id, property_code), '[{}]')
-                                                                ))) connections
+                                                                )))                              connections
                     FROM bitem.get_connection_ids(current_id)
                     GROUP BY class_, description, name, id, mainfirst, mainlast
                     ORDER BY class_, id) c
@@ -920,6 +942,23 @@ BEGIN
                                     AND f.openatlas_class_name = 'file'
                                   GROUP BY l.range_id) i
                                  ON i.ent_id = c.id) a
+        WHERE a.id IN (SELECT ids
+                       FROM bitem.get_entities(
+                               ARRAY ['person', 'group', 'artifact', 'place', 'acquisition', 'event', 'activity', 'creation', 'move', 'production', 'modification'],
+                               196063
+                            )
+                       UNION ALL
+                       SELECT location_id
+                       FROM bitem.geometries
+                       UNION ALL
+                       SELECT place_id
+                       FROM bitem.geometries
+                       UNION ALL
+                       SELECT id FROM model.entity WHERE openatlas_class_name = 'type')
+          AND a.id NOT IN (SELECT e.id
+                           FROM model.entity e
+                                    JOIN model.link l ON e.id = l.domain_id
+                           WHERE l.range_id IN (222268))
         GROUP BY a.class_;
 END;
 $$;
@@ -948,6 +987,7 @@ SELECT e.id,
        e.description,
        bitem.get_imgs(e.id)                                  AS images,
        bitem.get_three_d_models(e.id)                        AS models,
+       bitem.get_vids(e.id)                                  AS videos,
         bitem.getdates(e.begin_from, e.begin_to, e.begin_comment)         AS begin,
         bitem.getdates(e.end_from, e.end_to, e.end_comment)          AS end,
        (SELECT jsonb_agg(jsonb_build_object('class',
@@ -1029,3 +1069,26 @@ CREATE TRIGGER delete_catcher
     ON model.entity
     FOR EACH ROW
 EXECUTE PROCEDURE bitem.catch_deletes();
+
+DROP TABLE IF EXISTS bitem.stories;
+CREATE TABLE bitem.stories (
+    id serial PRIMARY KEY,
+    story_id INT,
+    story_name TEXT,
+    story_image INT,
+    case_study INT,
+    sortorder INT,
+    element_heading TEXT,
+    element_text TEXT, -- max 270 chars
+    element_subtext TEXT, -- max 270 chars
+    element_background INT,
+    element_media1 INT,
+    element_media2 INT,
+    element_media3 INT,
+    goto1 INT,
+    goto2 INT,
+    goto3 INT,
+    map BOOLEAN,
+    map_origin INT,
+    jump_to INT
+)

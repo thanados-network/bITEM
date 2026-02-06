@@ -16,8 +16,8 @@
             <span>{{_('learn more')}}</span>
         </a>
     </div>
-    <div class="container">
-        <div class="bitem-text" id="introText">
+    <div class="container min-max-screen" id="introText">
+        <div class="bitem-text">
             <h2 class="en mb-5">Welcome to bITEM,</h2>
             <span class="en">
                     <p>
@@ -70,19 +70,24 @@
                         miteinander verbunden sind.
                     </p>
                 </span>
-
+            <div class="text-center mt-5">
+                <a id="explore" class="line-fade line-fade-m fadeabout text-center" href="#cs-cards">
+                    <i class="bi bi-box-arrow-in-right me-1"></i>
+                    <span>{{_('explore')}}</span>
+                </a>
+            </div>
         </div>
 
 
     </div>
 
 
-    <div class="container mt-5">
+    <div class="container mt-5 d-none">
         <div class="bitem-text" id="caseStudies">
             <h2 class="case-study-title"> Case Studies </h2>
             <div class="row" id="caseStudyCards">
                 <div class="col-md-3 col-sm-12">
-                    <a href="/view/196952">
+                    <a href="/entities/197087">
                         <div class="card">
                             <img src="/static/images/placeholder_img/finalVenus.jpg" class="card-img" alt="...">
                             <div class="card-img-overlay">
@@ -115,7 +120,7 @@
                 </div>
 
                 <div class="col-md-3 col-sm-12">
-                    <a href="/view/196078">
+                    <a href="/entities/197085">
                         <div class="card">
                             <img src="/static/images/placeholder_img/finalNovara.jpg" class="card-img" alt="...">
                             <div class="card-img-overlay">
@@ -148,7 +153,7 @@
                 </div>
 
                 <div class="col-md-3 col-sm-12">
-                    <a href="/view/213189">
+                    <a href="/entities/198233">
                         <div class="card">
                             <img src="/static/images/placeholder_img/finalMitterhof.jpg" class="card-img" alt="...">
                             <div class="card-img-overlay">
@@ -156,8 +161,8 @@
                                 <div class="de card-title">Mitterhof</div>
                                 <div class="caseStudyText">
                                 <span class="en">
-                                    Surrounding the Mitterhof farm in Lower Austria lies a small but 
-                                    historically fascinating area with traces of settlement dating back 
+                                    Surrounding the Mitterhof farm in Lower Austria lies a
+                                    historically fascinating landscape with traces of settlement dating back 
                                     to the Early Bronze Age and onwards. This area, located at the Czech 
                                     border, experienced various phases of human history, including the 
                                     Middle Bronze Age, the Latène period, the Marcomannic Wars and the 
@@ -167,8 +172,8 @@
                                     medieval motte-and-bailey castle. This case study reveals the 
                                     fascinating history and changes to the Mitterhof site.
                                 </span>
-                                    <span class="de">
-                                    In der Nähe des Mitterhofs in Niederösterreich liegt ein kleines, aber historisch reiches Gebiet, das 
+                                <span class="de">
+                                    Um den Mitterhof in Niederösterreich findet sich eine historisch reiche Landschaft, das 
                                     Siedlungsspuren ab der Frühbronzezeit aufweist. Dieses nahe der tschechischen Grenze gelegene 
                                     Gebiet erlebte verschiedene Phasen menschlicher Aktivität, darunter die Mittelbronzezeit, die 
                                     Latènezeit, die Markomannenkriege und das Früh- bis Spätmittelalter. Besonders hervorzuheben 
@@ -183,7 +188,7 @@
                 </div>
 
                 <div class="col-md-3 col-sm-12">
-                    <a href="/view/191241">
+                    <a href="/entities/229739">
                         <div class="card">
                             <img src="/static/images/placeholder_img/finalHauskirchen.jpg" class="card-img" alt="...">
                             <div class="card-img-overlay">
@@ -191,20 +196,19 @@
                                 <div class="de card-title">Hauskirchen</div>
                                 <div class="caseStudyText">
                                 <span class="en">
-                                    During construction work in 1967, a burial ground belonging to the Lombards, originally from 
-                                    Skadan (present-day Scandinavia), was discovered and handed over to the Federal Monuments Office. 
-                                    The excavation was led by Dr. Horst Adler. It was confirmed that among the findings was a lavish 
-                                    grave, Grave 13, containing a woman along with a wagon and two horses, which had also survived looting. 
-                                    Since the end of his research, the findings, including one of the top 100 exhibition pieces, are 
-                                    displayed at the Natural History Museum Vienna.
+                                    During construction work in 1967, a Lombard burial ground was discovered which is considered to be one of 
+                                    the most outstanding examples of Lombard presence in Austria. The finds included the grave of a Lombard princess 
+                                    with a chariot and two horses, which had survived plundering relatively well. Her life and death, as well as 
+                                    the looting and subsequent investigation of her grave, will be explored in more detail here. Since the excavations 
+                                    were completed, the finds-including one of the top 100 exhibits-have been on display at the Natural History Museum Vienna.
                                 </span>
                                     <span class="de">
-                                    Bei Bauarbeiten 1967 wurde ein Gräberfeld der ursprünglich aus Skadan (heutiges Skandinavien) 
-                                    stammenden Langobarden entdeckt und dem Bundesdenkmalamt übergeben. Die dortige Ausgrabung wurde 
-                                    von Dr. Horst Adler übernommen. Die Funde umfassten ein Prunkgrab einer Frau (Grab 13) mit Wagen und 
-                                    zwei Pferden, welches auch eine Plünderung gut überstanden hatte. Seit Abschluss der Untersuchungen 
-                                    sind die Funde - darunter auch eines der Top 100 Ausstellungsstücke - im Naturhistorischen Museum Wien 
-                                    ausgestellt.
+                                    Bei Bauarbeiten wurde 1967 ein langobardisches Gräberfeld entdeckt, das bis heute einen der herrausragendsten 
+                                    Nachweise der Langobarden in Österreich darstellt. Die Funde umfassen das Prunkgrab einer langobardischen 
+                                    Prinzessin mit Wagen und zwei Pferden, welches auch eine Plünderung relativ gut überstanden hatte. Deren Leben 
+                                    und Tod, sowie die Plünderung und anschließende Erforschung ihres Grabes soll hier näher beleuchtet werden. 
+                                    Seit Abschluss der Untersuchungen sind die Funde - darunter auch eines der Top 100 Ausstellungsstücke - 
+                                    im Naturhistorischen Museum Wien ausgestellt.
                                 </span>
                                 </div>
                             </div>
@@ -215,7 +219,28 @@
             </div>
         </div>
     </div>
+    <div id="cs-cards"  style="padding-top: 56px">
+        {% for casestudy in casestudies %}
+        {% if loop.index is odd %} <div class="row g-0"> {% endif %}
+        <div class="col-xl-6">
+            <a href="/entities/{{casestudy.id}}" class="cs-card heading-card">
+               <div class="foreground">
+               <div class="background" style="background-image: url('{{casestudy.image}}');"><div class="cs-name">{{casestudy.name}}</div></div>
+               </div>
+            </a>
 
+        </div>
+        {% if (loop.index) is not odd %}
+            </div>
+        {% endif %}
+        {% endfor %}
+        {% if casestudies|length is odd %}
+        <div class="col-xl-6">
+            <div class="cs-card heading-card lastcard"><div class="background">{% include 'footer.html' %}</div></div>
+        </div>
+        {% endif %}
+
+    </div>
 
 </main>
 
@@ -225,6 +250,6 @@
 <script src="/static/js/index.js"></script>
 
 
-{% include 'footer.html' %}
+
 
 {% endblock %}

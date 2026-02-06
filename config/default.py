@@ -35,11 +35,14 @@ VIEW_CLASSES = {
     'groups': ('group',),
     'events': ('acquisition', 'event', 'activity', 'creation', 'move', 'production', 'modification'),
     'places': ('place',),
-    'actors': ('person', 'group')
+    'actors': ('person', 'group'),
+    'entities': ('artifact', 'acquisition', 'event', 'activity', 'creation', 'move', 'production', 'modification', 'person', 'group', 'place')
 }
 
 MEDIA_EXTENSION = ['.png', '.bmp', '.jpg', '.jpeg', '.glb', '.webp']
 IMAGE_EXTENSION = ['.png', '.bmp', '.jpg', '.jpeg']
+THREED_EXTENSION = ['.glb']
+VIDEO_EXTENSION = ['.mp4']
 
 # Paths
 JPG_FOLDER_PATH = '/static/images/jpgs'
@@ -65,6 +68,7 @@ META_ORG_URL = 'https://nhm-wien.ac.at'
 META_ORG_WD = 'https://www.wikidata.org/wiki/Q688704'
 META_LICENSE = 'https://creativecommons.org/licenses/by/4.0/'
 
-CASE_STUDY = 12345
+CASE_STUDY = 196063
+CASE_STUDIES = (197087, 198233, 197085, 229739, 234465)
 HIDDEN_ONES = (222268,) #ids of case studies not to be shown, eg. for a "hidden" tag
 STORY_THRESHOLD = 2 #minimum count of child or succeeding events necessary to show a story map

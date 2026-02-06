@@ -1,5 +1,4 @@
 function languageToggle(text="hallo welt ") {
-    console.log(text + "language is: " + language)
     var elementsToShow = language === "de" ? document.querySelectorAll(".de") : document.querySelectorAll(".en");
 
         elementsToShow.forEach(function(element) {
@@ -196,7 +195,7 @@ function enlarge3d(model, poster, name) {
     const modalThreeD = new bootstrap.Modal('#info-modal')
 
 
-    id = model.replace('.glb', '')
+    let id = model.replace('.glb', '')
 
     var closedModalHashStateId = "#modalClosed";
     var openModalHashStateId = "#modalOpen";

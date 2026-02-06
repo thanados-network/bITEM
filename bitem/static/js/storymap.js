@@ -1,214 +1,287 @@
-// Filter the connections to include only "place" class connections
-const mapData = data.connections.filter((connection) =>
-  ["place"].includes(connection.class)
-);
-console.log(mapData);
+let mobile
 
-let myTimeEntity = [];
-
-// Process each node in the filtered connections
-for (const place in mapData[0].nodes) {
-  let dateThere = false;
-  let placeThere = false;
-  if (mapData[0].nodes[place].spatialinfo) {
-    if (
-      typeof mapData[0].nodes[place].spatialinfo.geometry.geometries[0]
-        .coordinates !== "undefined"
-    ) {
-      placeThere = true;
-
-      mapData[0].nodes[place].involvement.forEach((node) => {
-        if (node.begin) {
-          dateThere = true;
-          node.beginDBP = calculateTimeBP(node.begin);
-        }
-        if (node.end) {
-          dateThere = true;
-          node.endDBP = calculateTimeBP(node.end);
-        }
-        if (node.endDBP && node.beginDBP) {
-          node.duration = node.beginDBP - node.endDBP;
-        }
-        if (dateThere) {
-          node.spatialinfo = mapData[0].nodes[place].spatialinfo;
-        }
-        if (dateThere && placeThere) {
-          myTimeEntity.push(node);
-        }
-      });
-    }
-  }
+if (window.matchMedia('(max-width: 770px)').matches) {
+    mobile = true
+} else {
+    mobile = false
 }
 
-sortedDates = myTimeEntity.sort((a, b) => {
-  const aBeginSort = a.beginDBP || a.endDBP;
-  const bBeginSort = b.beginDBP || b.endDBP;
-  if (aBeginSort !== bBeginSort) {
-    return aBeginSort - bBeginSort;
-  } else {
-    const aEndSort = a.endDBP || a.beginDBP;
-    const bEndSort = b.endDBP || b.beginDBP;
-    return aEndSort - bEndSort;
-  }
-});
 
-function groupByIdenticalKeys(array) {
-  const map = new Map();
-  array.forEach((item) => {
-    const {
-      origin_id,
-      begin,
-      beginDBP,
-      duration,
-      end,
-      endDBP,
-      origin,
-      ...diffProps
-    } = item;
-    const key = JSON.stringify({
-      origin_id,
-      begin,
-      beginDBP,
-      duration,
-      end,
-      endDBP,
-      origin,
+// Function to create details div
+const detailsContainer = document.getElementById("detailsContainer");
+const detailsContent = document.getElementById("detailsContent");
+const spinner = document.getElementById("spinner");
+
+let currentOid
+let previousItem
+let nextItem
+
+function moveToAdjacentItems(forward) {
+    let items = timeline.itemsData.get();
+    items.sort((a, b) => new Date(a.start) - new Date(b.start));
+
+    // Get all items sorted by start time
+    const index = items.findIndex(item => item.oid === currentOid);
+
+
+    // Determine the previous and next items
+    previousItem = index > 0 ? items[index - 1] : null;
+    nextItem = index < items.length - 1 ? items[index + 1] : null;
+
+    if (previousItem && !forward) {
+        flyToLocation(previousItem)
+        showDetails(previousItem)
+        timeline.setSelection(previousItem.oid);
+        timeline.moveTo(previousItem.start)
+    }
+
+    if (nextItem && forward) {
+
+        flyToLocation(nextItem)
+        showDetails(nextItem)
+        timeline.setSelection(nextItem.oid);
+        timeline.moveTo(nextItem.start);
+    }
+
+
+}
+
+if (!mobile) {
+    window.addEventListener('load', function () {
+        timeline.redraw();
+        //timeline.fit()
+
+        const ModalContent = document.getElementById('startModalContent')
+
+        const url = "/view/" + data.id + "/JSON";
+        fetch(url)
+            .then((response) => response.json())
+            .then((data) => {
+                let html = `<div><h4>${getLabelTranslation(data)}</h4></div>`;
+                const element = document.getElementById('image-cont');
+                if (data.image) {
+                    element.style.backgroundImage = `url('${data.image.path.split('/full/')[0]}/full/max/0/default.png')`;
+                }
+                if (!data.image && data.images) {
+                    element.style.backgroundImage = `url('${data.images[0].path.split('/full/')[0]}/full/max/0/default.png')`;
+                }
+                //${!data.image && data.images ? `<img src="${(data.images[0].path).split('/full/')[0] + '/full/max/0/default.png'}" alt="...">` : ''}
+
+                if (data.start) {
+                    html += `<div style="display: flex; justify-content: center">`
+                    const startDate = makeLocalDate(data.start).localdate;
+
+                    if (data.end) {
+                        const endDate = makeLocalDate(data.end).localdate;
+
+                        if (startDate === endDate) {
+                            html += `<div>${startDate}</div>`;
+                        } else {
+                            html += `<div>${startDate} - ${endDate}</div>`;
+                        }
+                    } else {
+                        html += `<div>${startDate}</div>`;
+                    }
+                    html += '</div>'
+                }
+
+                if (data.content) {
+                    html += `<br><br><div>${getLanguage(data.content)}</div>`;
+                }
+
+                html += `<div class="mod-spacer"></div>
+                        <a href="#" data-bs-toggle="modal" data-bs-target="#startModal"
+                        class="line-fade line-fade-m">Start</a>
+                        <div class="mod-spacer"></div>
+                    `
+                ModalContent.innerHTML = html;
+            })
+            .catch((error) => {
+                console.error("Error fetching data:", error);
+            });
+
+        const startModal = new bootstrap.Modal('#startModal', {
+            keyboard: false
+        })
+        startModal.show()
+        const myModalEl = document.getElementById('startModal')
+        myModalEl.addEventListener('shown.bs.modal', event => {
+            const modHeight = (document.getElementById('startModalContent').clientHeight)
+            document.getElementById('image-cont').style.height = modHeight + 'px'
+        })
+
+        const modalEl = document.getElementById('startModal')
+        modalEl.addEventListener('hidden.bs.modal', event => {
+            presentTimeline()
+        })
+
+        const links = document.querySelectorAll('.vis-item-content a');
+
+        links.forEach(link => {
+            link.addEventListener('click', (event) => {
+                event.preventDefault();
+                const clickedItem = timelineData.find((item) => item.oid === parseInt((link.href).split('#')[1]));
+                showDetails(clickedItem)
+
+                setTimeout(() => {
+                    detailsContainer.classList.remove("hidden");
+                }, 100);
+            });
+        });
     });
-    if (!map.has(key)) {
-      map.set(key, {
-        origin_id,
-        begin,
-        beginDBP,
-        duration,
-        end,
-        endDBP,
-        origin,
-        places: [],
-      });
-    }
-    map.get(key).places.push(diffProps);
-  });
-  return Array.from(map.values());
+} else {
+    window.addEventListener('load', function () {
+        let items = timeline.itemsData.get();
+        items.sort((a, b) => new Date(a.start) - new Date(b.start));
+        timeline.setSelection(items[0].id);
+        let clickedItem = timelineData.find((item) => item.oid === items[0].id);
+        flyToLocation(clickedItem)
+        showDetails(clickedItem)
+        currentOid = clickedItem.oid
+    })
 }
 
-const groupedArray = groupByIdenticalKeys(sortedDates);
-console.log(groupedArray);
 
-// Remove entry with undefined begin/end
-const cleanedGroupedArray = groupedArray.filter(
-  (item) => item.begin !== undefined && item.end !== undefined
-);
-console.log(cleanedGroupedArray);
+function makeHeader() {
+    let html = `<div> ${getLabelTranslation(data)} </div>`
+    if (data.start) {
+        let startDate = makeLocalDate(data.start).localdate;
+        if (data.end) {
+            let endDate = makeLocalDate(data.end).localdate;
+            if (startDate === endDate) {
+                html += `<div>${startDate}</div>`;
+            } else {
+                html += `<div>${startDate} - ${endDate}</div>`;
+            }
+        } else {
+            html += `<div>${startDate}</div>`;
+        }
+    }
+    return html
+}
 
-const map = L.map("map").setView([45.644, 13.756], 13);
+function presentTimeline() {
+    let short = true
+    let items = timeline.itemsData.get();
+    items.sort((a, b) => new Date(a.start) - new Date(b.start));
+    let totalduration = (items[(items.length-1)].start - items[0].start)
+    if ((totalduration / (1000 * 60 * 60 * 24 * 365.25)) > 8000) short = false
+    if (short) timeline.fit()
+
+    if (items.length >= 20) {
+        var start = new Date(items[0].start);
+        var end = new Date(items[10].start);
+        timeline.setWindow(start, end, {animation: {duration: 3000, easingFunction: 'easeInOutQuad'}});
+        setTimeout(() => {
+            timeline.setSelection(items[0].id);
+            let clickedItem = timelineData.find((item) => item.oid === items[0].id);
+            flyToLocation(clickedItem)
+            showDetails(clickedItem)
+        }, 2000);
+    } else {
+        timeline.setSelection(items[0].id);
+        if (!short) timeline.moveTo(items[0].start);
+        let clickedItem = timelineData.find((item) => item.oid === items[0].id);
+        flyToLocation(clickedItem)
+        showDetails(clickedItem)
+    }
+
+
+}
+
+
+const map = L.map("map", {'zoomControl': false}).setView([45.644, 13.756], 2.5); // Adjust the zoom level here
 
 var osm = L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-  maxZoom: 19,
-  attribution:
-    '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
+    maxZoom: 19,
+    minZoom: 3,
+    attribution:
+        '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>',
 });
 osm.addTo(map);
 
-var baseMaps = {
-  "Open Street Map": osm,
-};
-L.control.layers(baseMaps).addTo(map);
-
-function transformDate(dateString) {
-  if (!dateString) {
-    console.error("Invalid date string:", dateString);
-    return null;
-  }
-  const parts = dateString.split("-");
-  const year = parseInt(parts[0]);
-  const month = parseInt(parts[1]) - 1;
-  const day = parseInt(parts[2]);
-  return new Date(year, month, day);
-}
-
-console.log(cleanedGroupedArray);
-
-const timelineData = cleanedGroupedArray
-  .map((item) => {
-    if (!item.begin || !item.end) {
-      console.error("Missing begin or end date for item:", item);
-      return null;
-    }
-    if (typeof item.places[0] === "undefined") {
-      console.error("No Origin", item);
-      return null;
-    }
-    const place = item.places;
-
-    return {
-      oid: item.origin_id,
-      content: getTypeTranslation(item.origin),
-      start: transformDate(item.begin),
-      end: transformDate(item.end),
-      place: place,
-    };
-  })
-  .filter((item) => item !== null);
-console.log(timelineData);
+const storymapdata = makeMapData(data, id)
+const timelineData = storymapdata.timelineData
+const startDate = storymapdata.startDate
+const endDate = storymapdata.endDate
+const mapData = storymapdata.mapData
 
 const items = new vis.DataSet(
-  timelineData.map((item) => {
-    const start = new Date(item.start);
-    const end = new Date(item.end);
-    const duration = (end - start) / (1000 * 60 * 60 * 24); // Convert duration to days
+    timelineData.map((item) => {
+        const start = new Date(item.start);
+        const end = new Date(item.end);
+        const duration = (end - start) / (1000 * 60 * 60 * 24); // Convert duration to days
 
-    item.title = `${
-      item.content
-    } (${start.toDateString()} - ${end.toDateString()})`;
+        item.title = `${item.startstring} - ${item.endstring}`;
+        item.id = item.oid;
 
-    item.id = item.oid;
-
-    if (duration < 7) {
-      item.type = "point";
-    } else {
-      item.type = "range";
-    }
-    return item;
-  })
+        if (duration < 1) {
+            delete item.end;
+            item.type = "point"
+        }
+        return item;
+    })
 );
 
 const options = {
-  height: "25vh",
-  stack: true,
-  showCurrentTime: true,
-  horizontalScroll: true,
-  zoomKey: "ctrlKey",
-  min: new Date(1857, 0, 1),
-  max: new Date(1862, 11, 31),
-  start: new Date(1857, 3, 10),
-  end: new Date(1858, 1, 31),
-  width: "100%",
-  margin: {
-    item: 20,
-    axis: 5,
-  },
-  orientation: "bottom",
-  template: function (item, element, data) {
-    if (item.type === "point" || item.type === "range") {
-      return "";
-    }
-    return item.content;
-  },
+    stack: true,
+    cluster: false,
+    showCurrentTime: false,
+    horizontalScroll: true,
+    zoomKey: "ctrlKey",
+    start: startDate,
+    end: endDate,
+    min: new Date(-8640000000000000), // Smallest date allowed
+    max: new Date(8640000000000000),  // Largest date allowed
+    width: "100%",
+    margin: {
+        item: 20,
+        axis: 50,
+    },
+    orientation: "bottom",
 };
 
-// Function to add markers to the map
 const timelineElement = document.getElementById("timeline");
 const timeline = new vis.Timeline(timelineElement, items, options);
+
+function updateHighlight(item) {
+    const range = timeline.getWindow();
+    const timelineRect = timelineElement.getBoundingClientRect();
+    const itemStart = new Date(item.start).getTime();
+    const itemEnd = item.end ? new Date(item.end).getTime() : itemStart;
+    const rangeStart = new Date(range.start).getTime();
+    const rangeEnd = new Date(range.end).getTime();
+    const left = ((itemStart - rangeStart) / (rangeEnd - rangeStart)) * timelineRect.width;
+    const right = ((itemEnd - rangeStart) / (rangeEnd - rangeStart)) * timelineRect.width;
+
+    if (item.end && item.start) {
+        // Pixel-Positionen berechnen
+        highlight.style.left = `${left}px`;
+        highlight.style.width = `${right - left}px`;
+    } else {
+        highlight.style.left = `${left}px`;
+        highlight.style.width = `20px`;
+    }
+}
+
+window.addEventListener('load', () => {
+    timeline.redraw();
+});
+
+const highlight = document.createElement('div');
+highlight.className = 'highlight';
+timelineElement.appendChild(highlight);
+
+
 var oldMarkers = [];
 
 const mapMarkers = {};
 const sortedTimeline = timelineData.reverse();
-console.log(sortedTimeline);
 
 function getEventsForPlace(placeId) {
-  return sortedTimeline.filter((item) =>
-    item.place.some((place) => place.spatialinfo.properties.id === placeId)
-  );
+    return sortedTimeline.filter((item) =>
+        item.place.some((place) => place.spatialinfo.properties.id === placeId)
+    );
 }
 
 // Store the highlighted markers' coordinates and the polyline
@@ -217,355 +290,341 @@ let polyline = null;
 
 // Function to reset markers and remove polyline
 function resetMarkers() {
-  oldMarkers.forEach(function (placeId) {
-    var marker = mapMarkers[placeId];
-    if (marker) {
-      marker.setIcon(
-        L.icon({
-          iconUrl:
-            "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png",
-          shadowUrl:
-            "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-          iconSize: [25, 41],
-          iconAnchor: [12, 41],
-          popupAnchor: [1, -34],
-          shadowSize: [41, 41],
-        })
-      );
-      marker.closePopup();
+    oldMarkers.forEach(function (placeId) {
+        var marker = mapMarkers[placeId];
+        if (marker) {
+            marker.setIcon(
+                L.icon({
+                    iconUrl:
+                        "/static/icons/marker-icon.png",
+                    shadowUrl:
+                        "/static/icons/marker-shadow.png",
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [1, -34],
+                    shadowSize: [41, 41],
+                })
+            );
+            marker.closePopup();
+            marker.setZIndexOffset(1000);
+        }
+    });
+
+    oldMarkers = [];
+    highlightedMarkers = [];
+
+    // Remove existing polyline from the map
+    if (polyline) {
+        map.removeLayer(polyline);
+        polyline = null;
     }
-  });
-
-  oldMarkers = [];
-  highlightedMarkers = [];
-
-  // Remove existing polyline from the map
-  if (polyline) {
-    map.removeLayer(polyline);
-    polyline = null;
-  }
 }
 
 // Function to highlight a marker
 function highlightMarker(placeId) {
-  var marker = mapMarkers[placeId];
-  if (marker) {
-    marker.setIcon(
-      L.icon({
-        iconUrl:
-          "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
-        shadowUrl:
-          "https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png",
-        iconSize: [25, 41],
-        iconAnchor: [12, 41],
-        popupAnchor: [1, -34],
-        shadowSize: [41, 41],
-      })
-    );
-    oldMarkers.push(placeId);
+    var marker = mapMarkers[placeId];
+    if (marker) {
+        marker.setIcon(
+            L.icon({
+                iconUrl:
+                    "/static/icons/marker-icon-red.png",
+                shadowUrl:
+                    "/static/icons/marker-shadow.png",
+                iconSize: [25, 41],
+                iconAnchor: [12, 41],
+                popupAnchor: [1, -34],
+                shadowSize: [41, 41],
+            })
+        );
+        oldMarkers.push(placeId);
+        marker.setZIndexOffset(2000)
 
-    // Add marker's coordinates to highlightedMarkers array
-    highlightedMarkers.push(marker.getLatLng());
+        // Add marker's coordinates to highlightedMarkers array
+        highlightedMarkers.push(marker.getLatLng());
 
-    // If two markers are highlighted, draw a polyline between them
-    if (highlightedMarkers.length === 2) {
-      drawPolylineBetweenMarkers();
-    }
-  } else {
-    console.error("Marker not found for placeId:", placeId);
-  }
-}
-
-// Function to draw a polyline between two highlighted markers
-function drawPolylineBetweenMarkers() {
-  if (polyline) {
-    map.removeLayer(polyline); // Remove the existing polyline, if any
-  }
-
-  // Draw the polyline using the highlighted markers' coordinates
-  polyline = L.polyline(highlightedMarkers, {
-    color: "red",
-    weight: 2,
-    dashArray: "8, 8",
-    dashOffset: "5",
-  }).addTo(map);
-}
-
-// Add markers to the map
-mapData[0].nodes.forEach(function (place) {
-  let pointnotyetfound = true;
-  if (place.spatialinfo) {
-    if (
-      typeof place.spatialinfo.geometry.geometries[0].coordinates !==
-      "undefined"
-    ) {
-      place.spatialinfo.geometry.geometries.forEach(function (geometry) {
-        if (pointnotyetfound) {
-          if (geometry.type === "Point") {
-            const coordinates = geometry.coordinates;
-            const marker = L.marker([coordinates[1], coordinates[0]]).addTo(
-              map
-            );
-            console.log(place);
-
-            // Get the label and related events
-            const label = getLabelTranslation(place.spatialinfo.properties);
-            const events = getEventsForPlace(place.spatialinfo.properties.id);
-
-            // Format the events into HTML
-            let eventsHtml = "";
-            events.forEach((event) => {
-              eventsHtml += `<li>${event.title}</li>`;
-            });
-
-            const popupContent = `
-              <b>${label}</b>
-              <ul>${eventsHtml}</ul>
-            `;
-
-            marker.bindPopup(popupContent).openPopup();
-            pointnotyetfound = false;
-
-            // Store marker in mapMarkers object
-            mapMarkers[place.spatialinfo.properties.id] = marker;
-
-            // Add click event listener to the marker
-            marker.on("click", function () {
-              resetMarkers();
-              highlightMarker(place.spatialinfo.properties.id);
-              marker.openPopup(); // Open the popup when highlighting
-            });
-          }
+        // If two markers are highlighted, draw a polyline between them
+        if (highlightedMarkers.length === 2) {
+            drawCurvedLineBetweenMarkers();
         }
-      });
+    } else {
+        console.error("Marker not found for placeId:", placeId);
     }
-  }
+}
+
+// Function to draw a curved line between two highlighted markers
+function drawCurvedLineBetweenMarkers() {
+    if (polyline) {
+        map.removeLayer(polyline); // Remove the existing polyline, if any
+    }
+
+    const latlng1 = highlightedMarkers[0];
+    const latlng2 = highlightedMarkers[1];
+
+    // Calculate the midpoint between the two markers
+    const midLat = (latlng1.lat + latlng2.lat) / 2;
+    const midLng = (latlng1.lng + latlng2.lng) / 2;
+
+    // Offset the midpoint to create a control point for the Bezier curve
+    const offsetLat = (latlng2.lng - latlng1.lng) * 0.1; // Adjust this value to change the curvature
+    const offsetLng = (latlng1.lat - latlng2.lat) * 0.1; // Adjust this value to change the curvature
+    const controlLat = midLat + offsetLat;
+    const controlLng = midLng + offsetLng;
+
+    // Generate points along the Bezier curve
+    const points = [];
+    const numPoints = 100; // Number of points to approximate the curve
+    for (let i = 0; i <= numPoints; i++) {
+        const t = i / numPoints;
+        const lat = (1 - t) * (1 - t) * latlng1.lat + 2 * (1 - t) * t * controlLat + t * t * latlng2.lat;
+        const lng = (1 - t) * (1 - t) * latlng1.lng + 2 * (1 - t) * t * controlLng + t * t * latlng2.lng;
+        points.push([lat, lng]);
+    }
+
+    // Draw the curved line using a polyline
+    polyline = L.polyline(points, {
+        color: "red",
+        weight: 2,
+        dashArray: "8, 8",
+        dashOffset: "5",
+    }).addTo(map);
+}
+
+const bounds = L.latLngBounds();
+let placeCollection = new Set();
+mapData[0].nodes.forEach(function (place) {
+    if (place.spatialinfo) {
+        if (
+            typeof place.spatialinfo.geometry.geometries[0].coordinates !==
+            "undefined"
+        ) {
+            place.spatialinfo.geometry.geometries.forEach(function (geometry) {
+                const coordinates = geometry.coordinates;
+                console.log(place.spatialinfo)
+                console.log(place.id)
+
+                if (!placeCollection.has(place.id)) {
+                    if (geometry.type === "Point") {
+                        const marker = L.marker([coordinates[1], coordinates[0]]).addTo(map);
+                        placeCollection.add(place.id);
+                        bounds.extend([coordinates[1], coordinates[0]]);
+
+                        // Get the label and related events
+                        const label = getLabelTranslation(place.spatialinfo.properties);
+                        const events = getEventsForPlace(place.spatialinfo.properties.id);
+
+                        // Format the events into HTML
+                        let eventsHtml = "";
+                        events.forEach((event) => {
+                            eventsHtml += `<li>${event.involvement + ': <br> ' + event.title}</li>`;
+                        });
+
+                        const popupContent = `
+                          <b>${label}</b>
+                          <ul>${eventsHtml}</ul>
+                        `;
+
+                        // Store marker in mapMarkers object
+                        mapMarkers[place.spatialinfo.properties.id] = marker;
+
+                    }
+                }
+            });
+        }
+    }
 });
 
-// Function to create details div
 
-const detailsContainer = document.getElementById("detailsContainer");
-const detailsContent = document.getElementById("detailsContent");
-const closeBtn = document.getElementById("closeBtn");
+map.fitBounds(bounds);
+const mainBounds = bounds
 
-// Function to make the container draggable
-function makeDraggable(element) {
-  let pos1 = 0,
-    pos2 = 0,
-    pos3 = 0,
-    pos4 = 0;
-  if (element.querySelector(".header")) {
-    // if present, the header is where you move the DIV from:
-    element.querySelector(".header").onmousedown = dragMouseDown;
-  } else {
-    // otherwise, move the DIV from anywhere inside the DIV:
-    element.onmousedown = dragMouseDown;
-  }
-
-  function dragMouseDown(e) {
-    e = e || window.event;
-    e.preventDefault();
-    // get the mouse cursor position at startup:
-    pos3 = e.clientX;
-    pos4 = e.clientY;
-    document.onmouseup = closeDragElement;
-    // call a function whenever the cursor moves:
-    document.onmousemove = elementDrag;
-  }
-
-  function elementDrag(e) {
-    e = e || window.event;
-    e.preventDefault();
-    // calculate the new cursor position:
-    pos1 = pos3 - e.clientX;
-    pos2 = pos4 - e.clientY;
-    pos3 = e.clientX;
-    pos4 = e.clientY;
-    // set the element's new position:
-    element.style.top = element.offsetTop - pos2 + "px";
-    element.style.left = element.offsetLeft - pos1 + "px";
-  }
-
-  function closeDragElement() {
-    // stop moving when mouse button is released:
-    document.onmouseup = null;
-    document.onmousemove = null;
-  }
-}
-
-// Function to show details container
 function showDetailsContainer(content) {
-  detailsContent.innerHTML = content;
-  detailsContainer.classList.remove("hidden");
+    detailsContent.innerHTML = content;
+    detailsContainer.classList.remove("hidden");
 }
 
 // Function to hide details container
 function hideDetailsContainer() {
-  detailsContainer.classList.add("hidden");
+    detailsContainer.classList.add("hidden");
 }
-
-closeBtn.onclick = function () {
-  hideDetailsContainer();
-};
-
-// Initialize draggable functionality
-makeDraggable(detailsContainer);
 
 function populateContainer(id) {
-  const url = "/view/" + id + "/JSON";
-  console.log(url);
-  fetch(url)
-    .then((response) => response.json())
-    .then((data) => {
-      console.log(data);
-      let html = `<div><h3>${getLabelTranslation(data)}</h3></div>`;
+    const url = "/view/" + id + "/JSON";
 
-      if (data.start) {
-        const startDate = makeLocalDate(data.start).localdate;
+    // Show spinner and hide content
+    spinner.classList.remove("hidden");
+    detailsContent.classList.add("hidden");
+    const navContainer = document.getElementById('close-container')
+    const navButtons = document.querySelectorAll('a.move-btn');
+    const nextButtons = document.querySelectorAll('a.next-btn');
+    const prevButtons = document.querySelectorAll('a.prev-btn');
 
-        if (data.end) {
-          const endDate = makeLocalDate(data.end).localdate;
-
-          if (startDate === endDate) {
-            html += `<div><b>Date:</b> ${startDate}</div>`;
-          } else {
-            html += `<div><b>Start:</b> ${startDate}</div>`;
-            html += `<div><b>End:</b> ${endDate}</div>`;
-          }
-        } else {
-          html += `<div><b>Date:</b> ${startDate}</div>`;
-        }
-      }
-      if (data.image) {
-        html += `<div><img src="${data.image.path}" alt="${data.label}" style="max-width: 100%;"></div>`;
-      }
-      if (data.content) {
-        html += `<div>${getLanguage(data.content)}</div>`;
-      }
-
-      detailsContent.innerHTML = html;
+    navButtons.forEach(button => {
+        button.classList.remove('d-none')
     });
+
+
+    currentOid = id
+    let items = timeline.itemsData.get();
+    items.sort((a, b) => new Date(a.start) - new Date(b.start));
+    // Get all items sorted by start time
+    const index = items.findIndex(item => item.oid === currentOid);
+    let last = false
+    let first = false
+    if (index === 0) first = true
+    if (index === items.length - 1) last = true
+
+
+    if (first) {
+        prevButtons.forEach(button => {
+            button.classList.add('d-none')
+        });
+    }
+
+    if (last) {
+        nextButtons.forEach(button => {
+            button.classList.add('d-none')
+        });
+    }
+
+
+    fetch(url)
+        .then((response) => response.json())
+        .then((data) => {
+            let html = `<div><h4>${getLabelTranslation(data)}</h4></div>`;
+
+            if (data.start) {
+                html += `<div style="display: flex; justify-content: space-between">`
+                const startDate = makeLocalDate(data.start).localdate;
+
+                if (data.end) {
+                    const endDate = makeLocalDate(data.end).localdate;
+
+                    if (startDate === endDate) {
+                        html += `<div>${startDate}</div>`;
+                    } else {
+                        html += `<div>${startDate} - ${endDate}</div>`;
+                    }
+                } else {
+                    html += `<div>${startDate}</div>`;
+                }
+                html += `<div>${index + 1}/${items.length}</div></div>`
+            }
+            if (data.image) {
+                html += `<div><img src="${data.image.path}" alt="${data.label}" style="max-width: 100%;"></div>`;
+            }
+            if (data.content) {
+                html += `<div>${getLanguage(data.content)}</div>`;
+            }
+            detailsContent.innerHTML = html;
+
+            // Hide spinner and show content
+            spinner.classList.add("hidden");
+            detailsContent.classList.remove("hidden");
+            navContainer.innerHTML = `<a style="color: black!important;" class="line-fade line-fade-m" onclick="hideDetailsContainer()"><i style="color: black;" class="bi bi-x-lg"></i></a>`
+
+        })
+        .catch((error) => {
+            console.error("Error fetching data:", error);
+            // Hide spinner even if there's an error
+            spinner.classList.add("hidden");
+            detailsContent.classList.remove("hidden");
+            detailsContent.innerHTML = "<div>Error loading data</div>";
+        });
 }
 
-// Timeline click event listener
-document.getElementById("timeline").onclick = function (event) {
-  var props = timeline.getEventProperties(event); //Not only 2 places (origin/destination), there could be many more places that are connected to the event.
-  console.log("Clicked item:", props.item);
-  if (props.item) {
-    var clickedItem = timelineData.find((item) => item.oid === props.item);
-    if (clickedItem) {
-      resetMarkers();
+// Function to fly to the location on the map
+function flyToLocation(item) {
+    resetMarkers();
 
-      const view = [];
+    const view = [];
+    let currentZoom = map.getBoundsZoom(mainBounds)
+    console.log(currentZoom)
+    if (currentZoom < 12) currentZoom = 12
 
-      clickedItem.place.forEach(function (place) {
+    item.place.forEach(function (place) {
         highlightMarker(place.spatialinfo.properties.id);
         const marker = mapMarkers[place.spatialinfo.properties.id];
         if (marker) {
-          view.push(marker.getLatLng());
+            view.push(marker.getLatLng());
         }
-      });
+    });
 
-      if (view.length > 0) {
+    if (view.length > 0) {
         const bounds = L.latLngBounds(view);
-        if (view.length > 1) {
-          map.flyToBounds(bounds, { padding: [50, 50], maxZoom: 15 });
+        if (view.length > 1 && view[0] != view[1]) {
+            map.flyToBounds(bounds, {
+                animate: true,
+                duration: 1,
+            });
+
         } else {
-          const singleMarker = 8;
-          map.flyTo(view[0], singleMarker, {
-            animate: true,
-            duration: 5,
-          });
+            map.flyTo(view[0], currentZoom, {
+                animate: true,
+                duration: 1,
+            });
         }
-      }
-
-      const content = `
-        <h3>${clickedItem.content}</h3>
-      `;
-      showDetailsContainer(content);
-      populateContainer(clickedItem.oid);
-    } else {
-      console.error("Item not found in timelineData.");
     }
-  } else {
-    console.error("No item clicked.");
-  }
-};
-
-const resizer = document.querySelector(".resizer");
-const timelineContainer = document.getElementById("timeline-container");
-
-function initResizerFn(resizer, timelineContainer) {
-  let startY, startHeight;
-
-  function mouseDownHandler(e) {
-    startY = e.clientY;
-    startHeight = parseInt(
-      window.getComputedStyle(timelineContainer).height,
-      10
-    );
-
-    document.addEventListener("mousemove", mouseMoveHandler);
-    document.addEventListener("mouseup", mouseUpHandler);
-  }
-
-  function mouseMoveHandler(e) {
-    const dy = e.clientY - startY;
-    const newHeight = startHeight - dy;
-
-    if (newHeight >= 50 && newHeight <= window.innerHeight) {
-      timelineContainer.style.height = `${newHeight}px`;
-      //document.getElementById("map").style.height = `calc(100vh - ${newHeight}px - 56px)`;
-      
-      // Adjust the timeline size to fit the new container height
-      timeline.setOptions({ height: `${newHeight}px` }); // Update timeline height
-      timeline.redraw();  // Redraw or refresh the timeline
-    }
-  }
-
-  function mouseUpHandler() {
-    document.removeEventListener("mousemove", mouseMoveHandler);
-    document.removeEventListener("mouseup", mouseUpHandler);
-  }
-
-  resizer.addEventListener("mousedown", mouseDownHandler);
 }
 
-initResizerFn(document.querySelector(".resizer"), timelineContainer);
+// Function to show the details container
+function showDetails(item) {
+    const content = `<h3>${item.content}</h3>`;
+    showDetailsContainer(content);
+    populateContainer(item.oid);
+}
 
-document.getElementById("toggleTimelineBtn").addEventListener("click", function() {
-  const timelineContainer = document.getElementById("timeline-container");
+document.getElementById("timeline").onclick = function (event) {
+    var props = timeline.getEventProperties(event); // Get properties of the clicked event
+    if (props.item) {
+        let clickedItem = timelineData.find((item) => item.oid === props.item);
+        if (clickedItem) {
+            flyToLocation(clickedItem);
+            const screenWidth = window.innerWidth
+            if (screenWidth > 771) {
+                showDetails(clickedItem);
+            } else {
+                hideDetailsContainer()
+            }
 
-  if (timelineContainer.style.display === "none" || !timelineContainer.style.display) {
-    timelineContainer.style.display = "block";
-  } else {
-    timelineContainer.style.display = "none";
-  }
+        } else {
+            console.error("Item not found in timelineData.");
+        }
+    } else {
+        console.error("No item clicked.");
+        hideDetailsContainer()
+    }
+};
 
-  // If you want the timeline to redraw itself after being shown
-  if (timelineContainer.style.display === "block") {
-    timeline.redraw(); // Redraw the timeline to fit the full screen height
-  }
+
+window.addEventListener('load', function () {
+    timeline.redraw();
 });
 
-
-
 function mobileTimeline() {
-  const timelineContainer = document.getElementById("timeline-container");
-
-  if (window.innerWidth <= 500) {
-    // On mobile, make the timeline take up the full height
+    const timelineContainer = document.getElementById("timeline-container");
     timelineContainer.style.height = '100vh';
-    timeline.setOptions({ height: '100vh' });
-  } else {
-    // Restore the timeline to its normal height
-    timelineContainer.style.height = '25vh';
-    timeline.setOptions({ height: '25vh' });
-  }
-
-  timeline.redraw(); // Redraw the timeline to fit the new dimensions
+    timeline.setOptions({height: '100vh'});
+    timeline.redraw(); // Redraw the timeline to fit the new dimensions
 }
 
 // Call resizeTimeline on page load and whenever the window is resized
-window.addEventListener('resize', mobileTimeline);
-mobileTimeline(); // Initial call on page load
+
+mobileTimeline();
+
+timeline.on('select', (props) => {
+    if (props.items.length > 0) {
+        const selectedItem = items.get(props.items[0]);
+        updateHighlight(selectedItem);
+    } else {
+        highlight.style.width = '0'; // Highlight entfernen
+    }
+});
+
+timeline.on('rangechange', () => {
+    const selectedItemId = timeline.getSelection()[0];
+    if (selectedItemId) {
+        const selectedItem = items.get(selectedItemId);
+        updateHighlight(selectedItem);
+    }
+});
+

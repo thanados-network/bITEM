@@ -16,7 +16,7 @@ def setIIIFSize(img, wmax, hmax):
         string = str(wmax) + ','
     if w < wmax and h > hmax:
         string = ',' + str(hmax)
-    imgstring = iiifUrl + img + '/full/' + string + '/0/default.jpg'
+    imgstring = iiifUrl + img + '/full/' + string + '/0/default.png'
     image = {}
     image['path'] = imgstring
     image['id'] = str(img)
@@ -66,6 +66,8 @@ def makeFileList():
                     mimetype = 'poster'
                 if extension == '.pdf':
                     mimetype = 'pdf'
+                if extension == '.mp4':
+                    mimetype = 'video'
                 sql = """
                         INSERT INTO bitem.files (id, extension, filename, mimetype) VALUES (%(file_id)s, %(extension)s, %(filename)s, %(mimetype)s)
                 """

@@ -207,7 +207,7 @@ WHERE place_id IN (SELECT ids
                    FROM bitem.get_entities(
                            ARRAY ['person', 'group', 'artifact', 'place', 'acquisition', 'event', 'activity', 'creation', 'move', 'production', 'modification'],
                            196063
-                        ));   
+                        )) AND place_id NOT IN (SELECT e.id FROM model.entity e JOIN model.link l ON e.id = l.domain_id WHERE l.range_id IN (222268));   
     """
     g.cursor.execute(sql)
 
@@ -228,7 +228,7 @@ def makeItemTable(id=None, prop=None):
             DELETE FROM bitem.tbl_allitems WHERE id not in (SELECT id FROM bitem.tbl_allitems WHERE id IN (SELECT bitem.get_entities(
                        ARRAY ['person', 'group', 'artifact', 'place', 'acquisition', 'event', 'activity', 'creation', 'move', 'production', 'modification'],
                        196063
-                   )) AND (data-> 'casestudies' @> '[197087]' OR data-> 'casestudies' @> '[229739]' OR data-> 'casestudies' @> '[197085]' OR data-> 'casestudies' @> '[198233]') AND NOT data-> 'casestudies' @> '[222268]');
+                   )) AND NOT data-> 'casestudies' @> '[222268]');
    
             
             SELECT ids
@@ -236,11 +236,9 @@ def makeItemTable(id=None, prop=None):
                        ARRAY ['person', 'group', 'artifact', 'place', 'acquisition', 'event', 'activity', 'creation', 'move', 'production', 'modification'],
                        196063
                    ) """ + property_sql + """ ORDER BY ids DESC; """
-    print(sql)
     g.cursor.execute(sql)
 
     ids = g.cursor.fetchall()
-    print(ids)
 
     i = 1
     for row in ids:
@@ -274,10 +272,11 @@ def makeItemTable(id=None, prop=None):
                'image', (NULLIF(%(mainimage)s, 'Null'))::JSONB, 
                'images', (NULLIF(%(imagearray)s, 'Null'))::JSONB,
                'models', models,
+               'videos', videos,
                'geometry', geometry,
                'connections', connections
            )) AS data
-        FROM bitem.allitems WHERE id = %(id)s AND (casestudies @> '[197087]' OR casestudies @> '[229739]' OR casestudies @> '[197085]' OR casestudies @> '[198233]')  AND NOT casestudies @> '[222268]')
+        FROM bitem.allitems WHERE id = %(id)s AND NOT casestudies @> '[222268]')
         """
         g.cursor.execute(sql_insert, {'id': row.ids, 'mainimage': json.dumps(mainimage), 'imagearray': json.dumps(imagearray)})
 
@@ -290,9 +289,8 @@ def makeItemTable(id=None, prop=None):
                                                      ARRAY ['person', 'group', 'artifact', 'place', 'acquisition', 'event', 'activity', 'creation', 'move', 'production', 'modification'],
                                                      196063
                                              ))
-                           AND (data -> 'casestudies' @> '[197087]' OR data -> 'casestudies' @> '[229739]' OR
-                                data -> 'casestudies' @> '[197085]' OR data -> 'casestudies' @> '[198233]')
                            AND NOT data -> 'casestudies' @> '[222268]');
+        DELETE FROM bitem.tbl_allitems WHERE id IN (SELECT domain_id FROM model.link WHERE range_id = 222268)
     """
 
     g.cursor.execute(sql_delete)

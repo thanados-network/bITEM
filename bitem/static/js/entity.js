@@ -1,3 +1,5 @@
+
+
 const Clmarkers = L.markerClusterGroup({singleMarkerMode: true, maxClusterRadius: 1})
 let mapindex = 0;
 let network
@@ -7,6 +9,9 @@ let edgesDataset
 let allNodes
 let allEdges
 
+let timelineData = []
+
+if (makeMapData(data, id))  timelineData = makeMapData(data, id).timelineData
 
 const filterClasses = document.getElementById('filterClasses')
 const headlineBox = document.getElementById('headlineBox')
@@ -54,7 +59,9 @@ window.onload = function () {
     if (typeof (grid2) != 'undefined') grid2.refreshItems().layout();
     grid.refreshItems().layout();
     setTimeout(() => {
+        sortItemsByOrder()
         grid.refreshItems().layout();
+        sortItemsByOrder()
     }, 100);
     document.body.classList.add('images-loaded');
     const accordions = document.querySelectorAll('.accordion-button');
@@ -89,6 +96,12 @@ const grid = new Muuri('.grid', {
     layout: {
         fillGaps: true,
     },
+
+    sortData: {
+        order: function (item, element) {
+            return element.getAttribute('data-order');
+        },
+    }
 });
 
 function moveToFirst(itemId) {
@@ -119,7 +132,6 @@ function toggleMouseWheelZoom() {
     map.scrollWheelZoom.enabled() ? map.scrollWheelZoom.disable() : map.scrollWheelZoom.enable();
 }
 
-console.log(data)
 createMuuriElems(data)
 
 function createMuuriElems(obj) {
@@ -134,24 +146,10 @@ function createMuuriElems(obj) {
         addFilter('threed', models.length)
     }
 
-    let images = (obj.images)
-    if (images) {
-        extractImages(images);
-        addFilter('imgs', images.length)
-    }
-
-
-    let sourceConnections = data.connections.filter(
-        (connection) => ['external_reference', 'bibliography'].includes(connection.class)
-    );
-    if (sourceConnections.length > 0) {
-        grid.add(getSources(sourceConnections));
-        addFilter('source', sourceConnections.length)
-    }
 
     let actors = makeEnts(obj, ['group', 'person'])
     if (actors.length > 0) {
-        grid.add(setEnts(actors, '_actor'))
+        grid.add(setEnts(actors, '_actor', '3'))
         addFilter('actors', actors.length)
     }
 
@@ -175,14 +173,35 @@ function createMuuriElems(obj) {
             }, 400);
         })
         addFilter('map')
-
     }
 
 
+    let videos = obj.videos
+    if (videos) {
+        for (const video of videos) {
+            setvideo(video)
+        }
+    }
+
     let items = makeEnts(obj, ['artifact'])
     if (items.length > 0) {
-        grid.add(setEnts(items, '_item'))
+        grid.add(setEnts(items, '_item', '6'))
         addFilter('items', items.length)
+    }
+
+    let sourceConnections = data.connections.filter(
+        (connection) => ['external_reference', 'bibliography'].includes(connection.class)
+    );
+
+    let images = (obj.images)
+    if (images) {
+        extractImages(images);
+        addFilter('imgs', images.length)
+    }
+
+    if (sourceConnections.length > 0) {
+        grid.add(getSources(sourceConnections));
+        addFilter('source', sourceConnections.length)
     }
 
 
@@ -209,11 +228,11 @@ function makeStorymapBtn() {
     });
 
 // Output the counts
-    console.log(classCounts);
-    console.log(totalCount);
-    if (totalCount >= 2) {
+    if (totalCount >= 3) {
         const itemTemplate = document.createElement('div');
         itemTemplate.className = 'item';
+        itemTemplate.dataset.order = "2";
+        itemTemplate.dataset.class = "main";
 
         itemTemplate.innerHTML = `
         <div class="item-content item-content-story item-content-main">
@@ -229,6 +248,29 @@ function makeStorymapBtn() {
       `;
         grid.add(itemTemplate)
     }
+
+    if (timelineData.length >= 4) {
+        const itemTemplate = document.createElement('div');
+        itemTemplate.className = 'item';
+        itemTemplate.dataset.order = "2";
+        itemTemplate.dataset.class = "main";
+
+        itemTemplate.innerHTML = `
+        <div class="item-content item-content-story item-content-main">
+          <div class="card story-card">
+            <div>
+            <a class="tile-link bitem-text" href="/storymap/${data.id}">
+            <img class="story-btn-img" src="/static/images/assets/storymap.png">
+            <span class="story-btn-text">Storymap</span>            
+            </a>
+            </div>
+          </div>
+        </div>
+      `;
+        grid.add(itemTemplate)
+    }
+
+
 
 }
 
@@ -251,9 +293,10 @@ function make3d(models) {
 
     for (const file of groupedFiles) {
         const itemTemplate = document.createElement('div');
-    itemTemplate.className = 'item';
-    itemTemplate.dataset.class = 'threed';
-    itemTemplate.innerHTML = `
+        itemTemplate.className = 'item';
+        itemTemplate.dataset.class = 'threed';
+        itemTemplate.dataset.order = "3";
+        itemTemplate.innerHTML = `
     <div class="item-content item-3d">
       <div class="card">
       <div class="card-body">        
@@ -277,8 +320,8 @@ function make3d(models) {
 
     </div>
   `;
-    grid.add(itemTemplate)
-}
+        grid.add(itemTemplate)
+    }
 
 }
 
@@ -300,36 +343,77 @@ function extractImages(images) {
     </div>
   `;
     //grid.add(itemTemplate)
-    setGallery(images)
+    setGallery(images, 0, 3)
 }
 
-function setGallery(images) {
-
+function setGallery(images, from, to) {
+    let i = 0; // Initialize index
     for (const img of images) {
-        const itemTemplate = document.createElement('div');
-        itemTemplate.dataset.class = 'imgs'
-        let currentStyle = 'max-width: 350px; max-height: 350px';
+        // Load images between 'from' and 'to' range
+        if (i >= from && i < to) {
+            const itemTemplate = document.createElement('div');
+            itemTemplate.dataset.class = 'imgs';
+            itemTemplate.dataset.order = "7";
+            itemTemplate.className = 'gal-item';
+            let returnHtml = `
+                <div class="item-content gal-item-content">
+                    <img class="img-fluid hover-img" src="${img.path}">
+                    <div class="btn-panel">
+                        <a href="/iiif/${img.id.split('.')[0]}" title="${languageTranslations._openInViewer}" class="img-btn">
+                            <img src="/static/icons/iiif.png">
+                        </a>
+                    </div>
+                </div>
+            `;
+            itemTemplate.innerHTML = returnHtml;
+            grid.add(itemTemplate, {index: 3});
+        }
 
-        itemTemplate.className = 'gal-item';
-        let returnHtml = ''
-        returnHtml += `
-    <div className="gal-item-content">
-        <img class="img-fluid hover-img" style="${currentStyle}" src="${img.path}">
-        <div class="btn-panel">
-            <a href="/iiif/${img.id.split('.')[0]}" title="${languageTranslations._openInViewer}" class="img-btn"><img src="/static/icons/iiif.png"></a>
-        </div>
-    </div>
-  `
-        itemTemplate.innerHTML = returnHtml
-        grid.add(itemTemplate);
+        // Check if we should add the "load more" button
+        if (i === to - 1 && to < images.length) {
+            const loadMoreTemplate = document.createElement('div');
+            loadMoreTemplate.dataset.class = 'imgs';
+            loadMoreTemplate.className = 'gal-item';
+            loadMoreTemplate.dataset.order = "7";
+            let returnHtml = `
+                <div id="loadmore" class="gal-item-content" onclick="setGallery(data.images, ${to}, ${images.length})">
+                    <span class="loadmore-imgs bitem-text">Load ${images.length - to} more images</span>
+                    <img class="img-fluid hover-img" src="${images[to].path}">
+                </div>
+            `;
+            loadMoreTemplate.innerHTML = returnHtml;
+            grid.add(loadMoreTemplate);
+
+            break; // Stop loop after adding the load more button
+        }
+
+        i++; // Increment the index
+        setTimeout(() => {
+            grid.refreshItems().layout();
+        }, 700);
+    }
+
+    // If all images are loaded, remove the "load more" button
+    if (to >= images.length) {
+        const loadMoreBtn = document.getElementById('loadmore');
+        if (loadMoreBtn) {
+            loadMoreBtn.remove();
+        }
+
+        setTimeout(() => {
+            grid.refreshItems().layout();
+        }, 700);
+
     }
 
 }
+
 
 function setmap() {
     const itemTemplate = document.createElement('div');
     itemTemplate.className = 'item';
     itemTemplate.dataset.id = 'map'
+    itemTemplate.dataset.order = "5";
     itemTemplate.dataset.class = 'map'
     itemTemplate.innerHTML = `
     <div class="item-content">
@@ -347,6 +431,71 @@ function setmap() {
     return itemTemplate
 }
 
+function setvideo(videoFile) {
+    let newid = videoFile.replace('.mp4', 'id')
+    const itemTemplate = document.createElement('div');
+    itemTemplate.className = 'item';
+    itemTemplate.dataset.order = "4";
+    itemTemplate.dataset.class = 'video'
+    itemTemplate.innerHTML = `
+    <div class="item-content">
+      <div class="card" id="videoid="${newid}">
+            <video id="my-video${newid}" class="video-js" data-setup='{"controls": "true", "autoplay": "muted", "preload": "auto", "fluid":"true", "loop":"true"}'>
+              <source src="${uploadPath}/${videoFile}" type="video/mp4"></source>
+              <p class="vjs-no-js">
+               Your browser doesn't support HTML video. Here is a
+                <a href="${uploadPath}/${videoFile}" download="${uploadPath}/${videoFile}">link to the video</a> instead.
+              </p>
+            </video>                      
+        </div>
+      </div>
+    </div>
+  `;
+    grid.add(itemTemplate)
+
+    let Button = videojs.getComponent('Button');
+
+    // Create a new class for the custom button
+    class InfoButton extends Button {
+        constructor(player, options) {
+            super(player, options);
+            // Set the button's control text and inner HTML
+            this.controlText("Info");
+            this.el().innerHTML = '<i class="bi bi-info-circle"></i>'; // Customize icon if needed
+            this.el().setAttribute('data-bs-toggle', 'modal');
+            this.el().setAttribute('data-bs-target', '#videoInfoModal');
+        }
+
+        handleClick() {
+            showVideoInfo(newid);
+        }
+    }
+
+    videojs.registerComponent('InfoButton', InfoButton);
+
+    const player = videojs(`my-video${newid}`);
+
+    player.getChild('controlBar').addChild('InfoButton', {}, 0); // Adds button to the beginning of the control bar
+}
+
+function showVideoInfo(id) {
+    let idtoquery = id.replace('id', '')
+    let attrContainer = document.getElementById('videoInfoContent')
+    attrContainer.innerHTML = `<div class="d-flex justify-content-center">
+                                    <div class="spinner-grow text-light" role="status">
+                                        <span class="visually-hidden">Loading...</span>
+                                    </div>
+                               </div>`
+    getImageExt(idtoquery)
+        .then(data => {
+            attrContainer.innerHTML = data.requiredStatement.value[language][0]
+            console.log(data)
+        })
+        .catch(error => {
+            console.error("Error:", error);
+        });
+    console.log(idtoquery)
+}
 
 function extractPlaceInfo(data) {
     const connections = data.connections;
@@ -502,6 +651,7 @@ function addMuuri(data) {
     const itemTemplate = document.createElement('div');
     itemTemplate.className = 'item';
     itemTemplate.dataset.class = 'main'
+    itemTemplate.dataset.order = "1";
 
     let first = false;
     let last = false;
@@ -530,11 +680,13 @@ function addMuuri(data) {
         both = false;
     }
 
-    headlineBox.innerHTML += '<h4>' + getLabelTranslation(data) + '</h4>'
+    headlineBox.innerHTML += '<h4 title="'+classTitle+'">'+classIcon + getLabelTranslation(data) + '</h4>'
 
     itemTemplate.innerHTML = `
     <div class="item-content item-content-main">
       <div class="card">
+      ${data.image ? `<img src="${(data.image.path).split('/full/')[0] + '/full/max/0/default.png'}" alt="...">` : ''}
+      ${!data.image && data.images ? `<img src="${(data.images[0].path).split('/full/')[0] + '/full/max/0/default.png'}" alt="...">` : ''}
         <div class="card-body">
             <h3 class="card-title">${getLabelTranslation(data)}</h3>
             ${getAliases(data)}
@@ -559,9 +711,10 @@ function makeNetwork() {
     itemTemplate.className = 'item';
     itemTemplate.dataset.class = 'network'
     itemTemplate.dataset.id = 'network'
+    itemTemplate.dataset.order = "4";
     itemTemplate.innerHTML = `
     <div class="item-content item-content-network" id="network-cont">
-    <div id="network" ></div>
+    <div id="network" class="nopointerevents"></div>
     <a href="#"  id="ntw-large" class="img-btn"><i class="bi bi-arrows-fullscreen"></i></a>
     <span class="bitem-text" id="loadingspinner">
         <div class="spinner-border" role="status"></div>
@@ -620,10 +773,13 @@ function makeNetwork() {
 
     const enlargeNtBtn = document.getElementById('ntw-large')
     const currentNtCont = document.getElementById('network-cont')
+    const currentNt = document.getElementById('network')
     enlargeNtBtn.addEventListener('click', event => {
         setTimeout(() => {
             currentNtCont.classList.toggle('large-map')
             currentNtCont.classList.toggle('item-content-network')
+            currentNt.classList.toggle('fullwidthnw')
+            currentNt.classList.toggle('nopointerevents')
             moveToFirst('network')
             grid.refreshItems().layout();
         }, 400);
@@ -876,22 +1032,26 @@ function getTypes(data) {
 
     typeConnections.forEach((connection) => {
         connection.nodes.forEach((node) => {
+            console.log(node)
             const entry = {
                 name: node._label,
                 root: getTypeTranslation(node.root_type)
             };
+            entry.unit = '';
 
-            if (node.involvement && node.involvement[0] && node.involvement[0].info) {
-                entry.value = node.involvement[0].info;
+            if (node.involvement && node.involvement[0] && node.involvement[0].specification) {
+                entry.value = node.involvement[0].specification[0].info;
+                entry.unit = node.content.description
             } else {
                 entry.value = ''
+                if (node.content) {
+                    if (node.content[language]) {
+                        entry.unit = ' - ' + node.content[language]
+                    } else {entry.unit = ' - ' + node.content.description}
+                }
             }
 
-            if (node.content && node.content.description) {
-                entry.unit = node.content.description;
-            } else {
-                entry.unit = ''
-            }
+            console.log(entry)
 
             result.push(entry);
         });
@@ -924,10 +1084,15 @@ function getSources(sourceConnections) {
                 entry.type = ''
             }
 
-            if (node.involvement && node.involvement[0] && node.involvement[0].info) {
-                entry.pages = node.involvement[0].info;
-            } else {
-                entry.pages = ''
+            entry.pages = ''
+            if (node.involvement.length > 0) {
+                let spacer = ''
+                node.involvement.forEach((invo) => {
+                    if (invo.specification) {
+                        entry.pages += spacer + invo.specification[0].info
+                        spacer = '; '
+                    }
+                })
             }
 
             if (node.content && node.content.description) {
@@ -948,6 +1113,7 @@ function getSources(sourceConnections) {
     const itemTemplate = document.createElement('div');
     itemTemplate.className = 'item';
     itemTemplate.dataset.class = 'source'
+    itemTemplate.dataset.order = "9";
 
     let returnHtml = `
     <div class="item-content bib-cont">
@@ -957,7 +1123,6 @@ function getSources(sourceConnections) {
         `
 
     result.forEach(source => {
-
         if (source.class === 'bibliography') {
             returnHtml += `
         <p class="card-text"><i class="me-3 bi bi-book"></i>${source.citation} ${source.pages}</p>
@@ -973,7 +1138,6 @@ function getSources(sourceConnections) {
     itemTemplate.innerHTML = returnHtml
     return itemTemplate
 }
-
 
 function getMatchingNodes(referenceSystems, data) {
     const nodes = [];
@@ -1009,7 +1173,6 @@ function getMatchingNodes(referenceSystems, data) {
     }
     return returnHtml;
 }
-
 
 function setEvents(current_data) {
 
@@ -1048,6 +1211,7 @@ function setEvents(current_data) {
 
     const itemTemplate = document.createElement('div');
     itemTemplate.className = 'item';
+    itemTemplate.dataset.order = "8";
     itemTemplate.dataset.class = 'events'
 
     eventdates = []
@@ -1175,10 +1339,10 @@ function makeEnts(data, array) {
     return allEnts
 }
 
-
-function setEnts(current_data, class_) {
+function setEnts(current_data, class_, order) {
     const itemTemplate = document.createElement('div');
     itemTemplate.className = 'item';
+    itemTemplate.dataset.order = order;
     if (class_ === '_actor') itemTemplate.dataset.class = 'actors'
     if (class_ === '_item') itemTemplate.dataset.class = 'items'
 
@@ -1329,7 +1493,7 @@ function setEnts(current_data, class_) {
 function returnImage(height, id) {
     let filetype = '.' + id.split('.')[1]
     if (imageExtensions.includes(filetype)) {
-        let path = iiifUrl + id + '/full/,' + height + '/0/default.jpg'
+        let path = iiifUrl + id + '/full/,' + height + '/0/default.png'
         let img = `<img src="${path}" loading="eager">`
         return img
     }
@@ -1398,3 +1562,19 @@ window.addEventListener("mousemove", function (event) {
         document.querySelector('.nav-second').style.top = '56px';
     }
 });
+
+function sortItemsByOrder() {
+    // Get all the items in the grid
+    const items = grid.getItems();
+
+    items.sort((a, b) => {
+        const orderA = parseInt(a.getElement().getAttribute('data-order'), 10) || 0;
+        const orderB = parseInt(b.getElement().getAttribute('data-order'), 10) || 0;
+        return orderA - orderB;  // Ascending order
+    });
+
+    // Move each fixed item to the beginning of the grid, in order
+    items.forEach((fixedItem, index) => {
+        grid.move(fixedItem, index);
+    });
+}

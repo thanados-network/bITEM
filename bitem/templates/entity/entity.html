@@ -6,6 +6,9 @@
     const data = {{ data | tojson }};
     const propTranslations = {{ translations | tojson}}
     const eventList = {{ events | tojson}}
+    const classIcon = '{{ icon | safe}}'
+    const classTitle = "{{ title | safe}}"
+    const id = {{ id }}
 </script>
 <link rel="stylesheet" href="/static/css/item.css"/>
 <script src="/static/vendor/node_modules/leaflet/dist/leaflet.js"></script>
@@ -15,6 +18,8 @@
 <script src="/static/vendor/timeline-master/dist/js/timeline.min.js"></script>
 <link href="/static/vendor/timeline-master/dist/css/timeline.min.css" rel="stylesheet"/>
 <script src="/static/vendor/node_modules/vis-network/dist/vis-network.min.js"></script>
+<link href="/static/vendor/node_modules/video.js/dist/video-js.min.css" rel="stylesheet">
+<script src="/static/vendor/node_modules/video.js/dist/video.min.js"></script>
 
 <div class="loading">
     <div class="spinner-grow text-light" role="status">
@@ -31,6 +36,22 @@
     <div id="tiles" class="grid fade-me"></div>
 
 </main>
+
+
+<div class="modal fade" id="videoInfoModal" tabindex="-1" aria-labelledby="videoInfoModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="bg-dark modal-content bitem-text">
+            <div class="modal-body" id="videoInfoContent">
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-light" data-bs-dismiss="modal">{{_('close')|uc_first}}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/static/js/settimedata.js"></script>
 <script src="/static/js/entity.js"></script>
 
 
