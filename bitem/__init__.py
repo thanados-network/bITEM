@@ -20,12 +20,16 @@ from bitem.views import index, about, login, entities, entity, iiif, admin, stor
 from bitem.util.util import uc_first
 
 
-@babel.localeselector
 def get_locale() -> str:
     if 'language' in session:
         return session['language']
-    best_match = request.accept_languages.best_match(app.config['LANGUAGES'])
-    return best_match or 'en'
+    return request.accept_languages.best_match(app.config['LANGUAGES']) or 'en'
+
+
+if hasattr(babel, 'localeselector'):
+    babel.localeselector(get_locale)
+else:
+    babel.locale_selector_func = get_locale
 
 
 def connect() -> connection:
