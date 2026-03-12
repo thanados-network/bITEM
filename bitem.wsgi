@@ -1,5 +1,5 @@
 import os
 import sys
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+site.addsitedir('/var/www/frontend/bitem/.venv/lib/python3.13/site-packages')
 
 from bitem import app as application
