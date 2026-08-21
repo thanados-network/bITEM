@@ -73,7 +73,7 @@ BEGIN
     SELECT oa.cidoc_class_code
     FROM model.entity e
         JOIN model.openatlas_class oa ON e.openatlas_class_name = oa.name
-    WHERE e.id = current_id INTO class;;
+    WHERE e.id = current_id INTO class;
     IF _property_code NOT IN ('P2', 'P127') THEN
         -- Return NULL if _property_code is not in the specified values
         RETURN NULL;
