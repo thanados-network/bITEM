@@ -7,6 +7,13 @@ from bitem import app
 
 def getManifest(img_id):
     import urllib, json, requests, re
+    extension = None
+    license = None
+    license_uri = None
+    attribution = ''
+    creator = None
+    rightsholder = None
+
     filetypeJson = app.config['API_URL'] + app.config[
         'FILETYPE_API'] + '?file_id=' + str(img_id)
 
@@ -50,12 +57,21 @@ def getManifest(img_id):
 
     g.cursor.execute(sql, {'id': img_id})
     result = g.cursor.fetchall()
-    g.cursor.execute(
-        f'SELECT * FROM model.file_info WHERE entity_id = {img_id}')
+    g.cursor.execute("""
+        SELECT
+            string_agg(
+                    CASE WHEN rhf.description = 'creator' 
+                             THEN rh.name END, ', ') AS creator,
+            string_agg(
+                    CASE WHEN rhf.description = 'license_holder' 
+                             THEN rh.name END, ', ') AS license_holder
+        FROM model.rights_holder rh
+        JOIN model.rights_holder_file rhf ON rh.id = rhf.rights_holder_id
+        WHERE rhf.entity_id = %(id)s
+    """, {'id': img_id})
     license_info = g.cursor.fetchone()
-    if license_info:
-        creator = license_info.creator
-        rightsholder = license_info.license_holder
+    creator = license_info.creator
+    rightsholder = license_info.license_holder
 
     g.cursor.execute(f'SELECT description FROM model.entity WHERE id = {img_id}')
     filedescription = g.cursor.fetchone()
@@ -114,7 +130,7 @@ def getManifest(img_id):
         if rightsholder:
             attribution = '<p>'+ _('rightsholder(s)').capitalize() +  ': ' + rightsholder + '</p>' + attribution
         if creator:
-            attribution = '<p>' + _('creator(s)').capitalize() + ': ' + creator + '<p>' + attribution
+            attribution = '<p>' + _('creator(s)').capitalize() + ': ' + creator + '</p>' + attribution
         if filedescription.description:
             attribution = '<p>' + _('info').capitalize() +  ': ' + filedescription.description + '</p>' + attribution
         if sourceThere:

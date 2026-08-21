@@ -1,0 +1,23 @@
+[project]
+name = "bitem"
+version = "0.1.0"
+requires-python = ">=3.13"
+dependencies = [
+    "bcrypt",
+    "beautifulsoup4",
+    "Flask",
+    "Flask-Babel",
+    "Flask-Login",
+    "Flask-WTF",
+    "psycopg2-binary",
+    "Werkzeug",
+    "WTForms",
+    "requests",
+    "Pillow",
+    "iiif-prezi3",
+    "gunicorn",
+    "setuptools",
+]
+
+[dependency-groups]
+dev = []
